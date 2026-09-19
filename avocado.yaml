@@ -1,0 +1,78 @@
+default_target: imx95-var-dart
+supported_targets:
+  - imx95-var-dart
+
+extensions:
+  avocado-bsp-imx95-var-dart:
+    version: 0.1.0
+    release: r0
+    summary: Board support for the Variscite DART-MX95 on the Sonata-Board
+    description: Board support for the Variscite DART-MX95 on the Sonata-Board
+    license: Apache-2.0
+    url: https://github.com/avocadolinux/avocado-os
+    vendor: Avocado Linux <info@avocadolinux.org>
+
+    # Autoload the NXP IW612 WiFi driver. moal has no DT/udev alias, so the
+    # SDIO card enumerates (mmc2, 428b0000.mmc) but the driver never binds
+    # unless forced. btnxpuart autoloads from its UART DT node, so it is not
+    # listed here.
+    modprobe:
+      - moal
+
+    on_merge:
+      - udevadm control --reload
+      - udevadm trigger --type=subsystems --action=add --settle
+      - udevadm trigger --type=devices --action=add --settle
+
+    packages:
+      # Derived from `lsmod` on Variscite's own reference image for this exact
+      # SOM+carrier, then INTERSECTED with the kernel-module-* RPMs this target
+      # actually builds. That second step is not optional: 11 of the 29 loaded
+      # modules have no package on 6.18 because they are built in (=y) -- among
+      # them btrfs, overlay, xor, raid6-pq, af-alg, algif-skcipher and
+      # crct10dif-ce -- and naming a package that does not exist fails the
+      # install outright.
+
+      # --- Carrier-board peripherals (Sonata; none of these are on the FRDM) ---
+      kernel-module-mcp251xfd: '*'        # SPI CAN-FD controller
+      kernel-module-ads7846: '*'          # resistive touch (SPI)
+      kernel-module-rtc-ds1307: '*'       # board RTC
+      kernel-module-ov5640: '*'           # camera
+      kernel-module-snd-soc-wm8904: '*'   # audio codec
+      # --- Audio (SAI + i.MX PCM DMA) ---
+      kernel-module-snd-soc-fsl-sai: '*'
+      kernel-module-snd-soc-fsl-utils: '*'
+      kernel-module-imx-pcm-dma: '*'
+      # --- Media / JPEG (i.MX hardware JPEG codec) ---
+      kernel-module-mxc-jpeg-encdec: '*'
+      kernel-module-v4l2-jpeg: '*'
+      # --- CAN core ---
+      kernel-module-flexcan: '*'
+      kernel-module-can-dev: '*'
+      # --- Crypto (ARMv8 CE) ---
+      kernel-module-polyval-ce: '*'
+      kernel-module-polyval-generic: '*'
+      kernel-module-algif-hash: '*'
+      # --- Filesystems ---
+      kernel-module-fuse: '*'
+      # --- WiFi + Bluetooth (onboard NXP IW612: SDIO WiFi + UART BT) ---
+      # moal/mlan come from the out-of-tree kernel-module-nxp-wlan recipe, which
+      # reaches the feed via packagegroup-avocado-variscite-extra. There is no
+      # in-tree nxpwifi/mwifiex for this part on 6.18.
+      kernel-module-moal: '*'
+      kernel-module-mlan: '*'
+      kernel-module-btnxpuart: '*'
+      kernel-module-cfg80211: '*'
+      firmware-nxp-wifi-nxpiw612-sdio: '*'
+      wireless-regdb-static: '*'
+
+sdk:
+  image: docker.io/avocadolinux/sdk:{{ env.AVOCADO_DISTRO_RELEASE }}
+
+  # mkfs.erofs, which `avocado ext image` shells out to. Same reason as
+  # bsp-rb3gen2 / bsp-excc-q911: it is in this target's SDK feed but not in the
+  # SDK bootstrap (and not in the SDK base image), and an extension declaring no
+  # sdk.packages gets bootstrap only -- the failure is a bare
+  # "mkfs.erofs: command not found" at ext image time.
+  packages:
+    nativesdk-erofs-utils: "*"

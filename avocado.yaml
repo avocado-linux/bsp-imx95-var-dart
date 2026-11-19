@@ -9,7 +9,7 @@ extensions:
     summary: Board support for the Variscite DART-MX95 on the Sonata-Board
     description: Board support for the Variscite DART-MX95 on the Sonata-Board
     license: Apache-2.0
-    url: https://github.com/avocadolinux/avocado-os
+    url: https://github.com/avocado-linux/bsp-imx95-var-dart
     vendor: Avocado Linux <info@avocadolinux.org>
 
     # Autoload the NXP IW612 WiFi driver. moal has no DT/udev alias, so the
